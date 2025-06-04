@@ -1,5 +1,7 @@
 #include "graph.hpp" // Corrected include path
 #include <algorithm> // For std::find_if
+#include <queue>
+#include <map>
 
 Graph::Graph() {
     // Constructor can be empty for now
@@ -107,3 +109,72 @@ const std::vector<Edge>& Graph::get_edges_from_node(int node_id) const {
 //     // To be implemented (e.g., Dijkstra's or A*)
 //     return {};
 // }
+
+std::vector<int> Graph::find_shortest_path(int start_node_id, int end_node_id) const {
+    if (nodes_.find(start_node_id) == nodes_.end() || nodes_.find(end_node_id) == nodes_.end()) {
+        return {};
+    }
+    if (start_node_id == end_node_id) {
+        return {start_node_id};
+    }
+
+    std::map<int, double> distances;
+    std::map<int, int> predecessors;
+    std::priority_queue<std::pair<double, int>,
+                        std::vector<std::pair<double, int>>,
+                        std::greater<std::pair<double, int>>> pq;
+
+    for (const auto& node_pair : nodes_) {
+        distances[node_pair.first] = std::numeric_limits<double>::infinity();
+    }
+    distances[start_node_id] = 0.0;
+
+    pq.push({0.0, start_node_id});
+
+    while (!pq.empty()) {
+        double current_dist_to_u = pq.top().first;
+        int u_node_id = pq.top().second;
+        pq.pop();
+
+        if (current_dist_to_u > distances.at(u_node_id)) {
+            continue;
+        }
+
+        if (u_node_id == end_node_id) {
+            break;
+        }
+
+        if (adj_list_.count(u_node_id)) {
+            for (const Edge& edge : adj_list_.at(u_node_id)) {
+                int v_node_id = edge.to_node_id;
+                double edge_weight = edge.weight;
+
+                if (distances.count(v_node_id)) {
+                    if (distances.at(u_node_id) + edge_weight < distances.at(v_node_id)) {
+                        distances.at(v_node_id) = distances.at(u_node_id) + edge_weight;
+                        predecessors[v_node_id] = u_node_id;
+                        pq.push({distances.at(v_node_id), v_node_id});
+                    }
+                }
+            }
+        }
+    }
+
+    std::vector<int> path;
+    if (distances.at(end_node_id) == std::numeric_limits<double>::infinity()) {
+        return {};
+    }
+
+    int current_node_for_path = end_node_id;
+    while (current_node_for_path != start_node_id) {
+        path.push_back(current_node_for_path);
+        if (predecessors.find(current_node_for_path) == predecessors.end()) {
+            return {};
+        }
+        current_node_for_path = predecessors.at(current_node_for_path);
+    }
+    path.push_back(start_node_id);
+    std::reverse(path.begin(), path.end());
+
+    return path;
+}

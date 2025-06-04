@@ -2,7 +2,8 @@
 #define GRAPH_HPP
 
 #include <vector>
-#include <map> // For adjacency list
+#include <map>
+#include <limits> // Required for std::numeric_limits for Dijkstra
 
 // Represents a node in the graph (e.g., an intersection)
 struct Node {
@@ -41,12 +42,10 @@ public:
     const std::map<int, Edge>& get_all_edges() const;
     const std::vector<Edge>& get_edges_from_node(int node_id) const;
 
-
-    // Pathfinding (placeholder for now)
-    // std::vector<int> find_shortest_path(int start_node_id, int end_node_id);
+    std::vector<int> find_shortest_path(int start_node_id, int end_node_id) const;
 
 private:
-    std::map<int, Node> nodes_; // Map node_id to Node struct
+    std::map<int, Node> nodes_;
     std::map<int, Edge> edges_; // Map edge_id to Edge struct
     // Adjacency list for efficient lookup of outgoing edges from a node
     // Maps a node_id to a vector of Edge structs that start from this node
