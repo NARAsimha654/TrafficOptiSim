@@ -134,3 +134,12 @@ const std::queue<int>& Intersection::get_vehicle_queue(int approach_id) const {
 const std::vector<int>& Intersection::get_approach_ids() const {
     return approach_ids_;
 }
+
+int Intersection::pop_vehicle_from_queue(int approach_id) {
+    if (vehicle_queues_.count(approach_id) && !vehicle_queues_.at(approach_id).empty()) {
+        int vehicle_id = vehicle_queues_.at(approach_id).front();
+        vehicle_queues_.at(approach_id).pop();
+        return vehicle_id;
+    }
+    return -1; // Queue empty or approach_id does not exist
+}

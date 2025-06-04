@@ -8,6 +8,9 @@
         "iostream": "cpp",
         "string": "cpp",
         "queue": "cpp",
-        "stdexcept": "cpp"
+        "stdexcept": "cpp",
+        "random": "cpp",
+        "sstream": "cpp",
+        "fstream": "cpp"
     }
 }

@@ -45,6 +45,7 @@ public:
     // Gets the list of approach IDs for this intersection
     const std::vector<int>& get_approach_ids() const;
 
+    int pop_vehicle_from_queue(int approach_id); // Returns vehicle_id or -1 if empty
 
 private:
     int id_;

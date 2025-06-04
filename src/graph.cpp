@@ -2,6 +2,9 @@
 #include <algorithm> // For std::find_if
 #include <queue>
 #include <map>
+#include <fstream>   // For std::ifstream
+#include <sstream>   // For std::istringstream
+#include <iostream>  // For std::cerr error reporting
 
 Graph::Graph() {
     // Constructor can be empty for now
@@ -177,4 +180,71 @@ std::vector<int> Graph::find_shortest_path(int start_node_id, int end_node_id) c
     std::reverse(path.begin(), path.end());
 
     return path;
+}
+
+void Graph::clear() {
+    nodes_.clear();
+    edges_.clear();
+    adj_list_.clear();
+}
+
+bool Graph::load_from_file(const std::string& filepath) {
+    clear(); // Reset graph state before loading
+
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open graph file: " << filepath << std::endl;
+        return false;
+    }
+
+    std::string line;
+    int line_number = 0;
+    while (std::getline(file, line)) {
+        line_number++;
+        // Trim whitespace (simple version)
+        line.erase(0, line.find_first_not_of(" 	\r\n\v\f")); // Added \r\n\v\f for comprehensive trim
+        line.erase(line.find_last_not_of(" 	\r\n\v\f") + 1);
+
+
+        if (line.empty() || line[0] == '#') {
+            continue; // Skip empty lines and comments
+        }
+
+        std::istringstream iss(line);
+        char type;
+        iss >> type;
+
+        if (type == 'N') {
+            int node_id;
+            if (!(iss >> node_id)) {
+                std::cerr << "Error parsing Node line " << line_number << ": " << line << std::endl;
+                clear(); return false;
+            }
+            if (!add_node(node_id)) {
+                std::cerr << "Warning: Failed to add node " << node_id << " from line " << line_number << ". Maybe duplicate or other issue." << std::endl;
+                // Not returning false on duplicate node, add_node handles it.
+            }
+        } else if (type == 'E') {
+            int edge_id, from_node, to_node;
+            double weight;
+            if (!(iss >> edge_id >> from_node >> to_node >> weight)) {
+                std::cerr << "Error parsing Edge line " << line_number << ": " << line << std::endl;
+                clear(); return false;
+            }
+            if (!has_node(from_node) || !has_node(to_node)) {
+                std::cerr << "Error adding edge " << edge_id << " from line " << line_number
+                          << ": Node " << (has_node(from_node) ? to_node : from_node)
+                          << " does not exist (ensure nodes are defined before edges)." << std::endl;
+                // clear(); return false; // To be stricter, uncomment and return false
+            }
+            if (!add_edge(edge_id, from_node, to_node, weight)) {
+                std::cerr << "Warning: Failed to add edge " << edge_id << " from line " << line_number << ". Maybe duplicate ID or nodes don't exist." << std::endl;
+                // Not returning false on duplicate edge, add_edge handles it.
+            }
+        } else {
+            std::cerr << "Warning: Unknown line type '" << type << "' in file " << filepath << " at line " << line_number << ": " << line << std::endl;
+        }
+    }
+    file.close();
+    return true;
 }

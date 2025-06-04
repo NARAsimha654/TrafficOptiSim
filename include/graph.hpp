@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <limits> // Required for std::numeric_limits for Dijkstra
+#include <string> // For std::string filepath
 
 // Represents a node in the graph (e.g., an intersection)
 struct Node {
@@ -43,6 +44,9 @@ public:
     const std::vector<Edge>& get_edges_from_node(int node_id) const;
 
     std::vector<int> find_shortest_path(int start_node_id, int end_node_id) const;
+
+    bool load_from_file(const std::string& filepath);
+    void clear(); // Helper to reset graph state
 
 private:
     std::map<int, Node> nodes_;

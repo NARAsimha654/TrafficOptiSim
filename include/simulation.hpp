@@ -3,6 +3,7 @@
 
 #include <map>
 #include <vector>
+#include <random> // For random number generation
 #include "graph.hpp"
 #include "vehicle.hpp"
 #include "intersection.hpp"
@@ -36,6 +37,14 @@ private:
     std::map<int, Vehicle> vehicles_; // Key: vehicle_id
     std::map<int, Intersection> intersections_; // Key: intersection_id (node_id from graph)
     int current_tick_;
+
+    // For vehicle spawning
+    int last_vehicle_id_;
+    int spawn_timer_;
+    const int SPAWN_INTERVAL = 20; // Spawn a vehicle every 20 ticks (example)
+
+    // Random number generation (C++11 method)
+    std::mt19937 random_engine_;
 };
 
 #endif // SIMULATION_HPP
