@@ -4,6 +4,8 @@
         "cassert": "cpp",
         "vector": "cpp",
         "map": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "iostream": "cpp",
+        "string": "cpp"
     }
 }
