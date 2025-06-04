@@ -30,13 +30,31 @@ The system is composed of several key components that interact to simulate and o
     - A destination intersection (node ID) it aims to reach.
 - **Behavior**:
     - **Route Planning**: Upon creation or when needed, a vehicle plans its route by querying the `Graph` component (using `find_shortest_path`) to get the sequence of intersections it needs to traverse. This path is stored internally by the vehicle.
-    - *(Further behaviors like movement, reaction to traffic signals, and interaction with queues will be added in subsequent development stages.)*
+    - *(Vehicle movement and interaction with traffic signals are planned for future development.)*
 
 ### 3. Traffic Signal Controller (`intersection.hpp`/`intersection.cpp`)
-*(To be detailed in future development. This component will manage traffic light states and timings at intersections.)*
+- **Representation**: Each intersection is managed by an `Intersection` object.
+    - **ID**: Matches a node ID in the road network graph.
+    - **Approaches**: Manages multiple incoming directions or lanes, identified by unique `approach_id`s (e.g., corresponding to incoming edge IDs).
+    - **Traffic Signals**: For each approach, it maintains the current state of the traffic light (`RED`, `GREEN`, `YELLOW`).
+    - **Vehicle Queues**: For each approach, it maintains a queue of vehicles (by ID) waiting at a red or yellow light.
+- **Behavior**:
+    - **Signal Cycling**: The `update_signal_state()` method implements the logic for traffic light phase changes. Currently, it uses a fixed-time, round-robin approach:
+        - Each approach gets a GREEN light for a defined `GREEN_DURATION`.
+        - This is followed by a `YELLOW_DURATION`.
+        - Then the light turns RED, and the next approach in sequence gets a GREEN light.
+    - **Queue Management**: The `add_vehicle_to_queue()` method allows vehicles to be added to the waiting queue of a specific approach. *(Dequeuing logic will be part of vehicle movement.)*
 
-### 4. Simulation Core (`simulation.cpp`)
-*(To be detailed in future development. This component will manage the overall simulation loop, time progression, and state updates.)*
+### 4. Simulation Core (`simulation.hpp`/`simulation.cpp`)
+- **Orchestration**: The `Simulation` class is the central coordinator of the simulation.
+    - **State**: It holds the `Graph` representing the road network, and collections of all active `Vehicle` and `Intersection` objects.
+    - **Time**: It maintains the current simulation time via a `current_tick_` counter.
+- **Behavior**:
+    - **Setup**: Allows setting the graph and adding intersections and vehicles.
+    - **`tick()` method**: This is the main driver of the simulation. In each call to `tick()`:
+        - The `current_tick_` is incremented.
+        - It iterates through all `Intersection` objects and calls their `update_signal_state()` method, causing traffic lights to cycle.
+        - *(Future enhancements will include updating vehicle positions, handling vehicle-intersection interactions, and managing vehicle generation/despawning within the `tick()` method.)*
 
 ### 5. Multithreading
 *(Details on multithreading for vehicle generation, signal management, etc., will be provided as these features are implemented.)*
@@ -46,34 +64,53 @@ The system is composed of several key components that interact to simulate and o
 
 
 ## How to Run
-*(Instructions on dependencies, building, and running the simulation will be added here.)*
 
 ### Dependencies
-- C++17 or newer
-- Make (for building using the provided Makefile)
-- *(SFML if visualization is included)*
+- C++17 or newer (GCC or Clang recommended)
+- GNU Make (for building using the provided Makefile)
+- *(Optional: SFML if/when visualization is added)*
 
-### Building
+### Building the Project
+To build the main simulation executable and all test suites, navigate to the root directory of the project (`TrafficOptiSim/`) and run:
 ```bash
-# Clone the repository (assuming it's hosted on Git)
-# git clone <repository_url>
-# cd TrafficOptiSim
-
-# Build the project (e.g., test executables)
-make
+make all
 ```
-
-### Running Tests
+Alternatively, you can build only the main simulation executable:
+```bash
+make traffic_sim
+```
+Or build and run all tests:
 ```bash
 make run_tests
 ```
 
+### Running the Simulation
+After building, you can run the basic console-based simulation:
+```bash
+./bin/traffic_sim
+```
+**Expected Output:**
+The program will print:
+- Initial setup information (graph details, intersections created, vehicles with their planned paths).
+- Output for each simulation tick (default is 60 ticks):
+    - The current tick number.
+    - For each intersection: its ID, and the signal state (RED, GREEN, YELLOW) and current vehicle queue size for each of its approaches.
+You will observe the traffic light states cycling at each intersection over time. Currently, vehicle movement is not simulated, so queue sizes will remain 0 unless manually manipulated in code.
+
+### Running Tests
+To execute all compiled test suites:
+```bash
+make run_tests
+```
+This will run tests for the `Graph`, `Vehicle`, `Intersection`, and `Simulation` components, reporting PASS/FAIL status.
+
 ## Simulation Details
-*(More details about the simulation's mechanics, data inputs, and outputs will be provided here.)*
+*(More details about the simulation's mechanics, data inputs, and outputs will be provided here as the simulation evolves.)*
 
 ## Tech Stack
 - **Core Language**: C++ (C++17)
 - **Build System**: GNU Make
+- **Testing**: Basic `assert` statements in C++ test files.
 - **Libraries**:
     - Standard Template Library (STL): For data structures (vectors, maps, queues), algorithms, etc.
 - *(Optional: SFML for visualization)*
@@ -82,4 +119,4 @@ make run_tests
 *(To be added once visualization or significant simulation output is available.)*
 
 ## Future Enhancements
-*(A list of potential future improvements and stretch goals.)*
+*(A list of potential future improvements and stretch goals, including those mentioned by the user like logging, GUI map creation, REST APIs, and dynamic weather modifiers.)*

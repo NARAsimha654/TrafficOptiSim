@@ -6,6 +6,8 @@
         "map": "cpp",
         "limits": "cpp",
         "iostream": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "queue": "cpp",
+        "stdexcept": "cpp"
     }
 }
