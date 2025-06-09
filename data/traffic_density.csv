@@ -1,0 +1,31 @@
+# traffic_density.csv
+# Format: timestamp,edge_id,density,average_speed,vehicles_passed
+# timestamp: Simulation tick or time
+# edge_id: Identifier of the edge/road segment
+# density: Vehicles per unit length (e.g., vehicles/km)
+# average_speed: Average speed on the edge (e.g., km/h)
+# vehicles_passed: Count of vehicles passing a point during the timestamp interval
+
+1,12,0.2,50.5,10
+1,21,0.1,60.0,5
+1,13,0.3,40.2,12
+2,12,0.25,48.0,15
+2,21,0.12,58.5,7
+2,32,0.1,55.0,8
+3,12,0.3,45.0,18
+3,13,0.35,38.0,14
+3,23,0.05,65.0,4
+4,21,0.15,57.0,9
+4,32,0.11,54.0,10
+4,43,0.08,60.0,6
+# More data would follow for a real scenario
+10,12,0.5,30.0,25
+10,21,0.2,50.0,12
+10,13,0.4,35.0,20
+10,31,0.1,60.0,5
+11,12,0.55,28.0,28
+11,23,0.1,62.0,6
+11,34,0.07,66.0,3
+12,12,0.6,25.0,30
+12,21,0.22,48.0,14
+12,43,0.1,58.0,7
