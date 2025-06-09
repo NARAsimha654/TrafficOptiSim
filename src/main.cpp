@@ -1,110 +1,140 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <chrono> // For std::chrono for sleep
+#include <thread> // For std::this_thread::sleep_for
+
 #include "simulation.hpp"
 #include "graph.hpp"
 #include "vehicle.hpp"
 #include "intersection.hpp"
+#include "optimizer.hpp"       // New: Include optimizer
+#include "utils.hpp"           // New: Include utils
+#include "visualizer.hpp"      // New: Include visualizer
 
 int main() {
-    std::cout << "TrafficOptiSim - Enhanced Simulation Run" << std::endl;
-    std::cout << "---------------------------------------" << std::endl;
+    std::cout << "TrafficOptiSim - Enhanced Simulation Run with Visualizer & Optimizer" << std::endl;
+    std::cout << "--------------------------------------------------------------------" << std::endl;
 
     // 1. Create Graph
     Graph city_graph;
     if (!city_graph.load_from_file("data/sample_map.txt")) {
         std::cerr << "Failed to load graph from file. Exiting." << std::endl;
-        return 1; // Indicate an error
+        return 1;
     }
     std::cout << "Graph loaded successfully from data/sample_map.txt" << std::endl;
-    // Verify graph size based on file
-    // std::cout << "Graph has " << city_graph.get_all_nodes().size() << " nodes and "
-    //           << city_graph.get_all_edges().size() << " edges." << std::endl;
 
+    // 2. Create Intersections (as defined in sample_map.txt and current main)
+    // Node 1: Intersection with outgoing edges 12, 13
+    // Node 2: Intersection with outgoing edges 21, 23, 24
+    // Node 3: Intersection with outgoing edges 31, 32, 34
+    // Node 4: Intersection with outgoing edges 42, 43
+    // (Assuming edges are named <from_node><to_node> for simplicity in example)
+    std::map<int, Intersection> intersections_map;
+    const auto& all_nodes = city_graph.get_all_nodes();
+    for(const auto& node_pair : all_nodes) {
+        int node_id = node_pair.first;
+        std::vector<int> outgoing_edge_ids;
+        for(const auto& edge_pair : city_graph.get_edges_from_node(node_id)) {
+            outgoing_edge_ids.push_back(edge_pair.id);
+        }
+        if (!outgoing_edge_ids.empty()) {
+            Intersection intersection;
+            intersection.initialize(node_id, outgoing_edge_ids);
+            intersections_map[node_id] = intersection;
+        }
+    }
+    std::cout << intersections_map.size() << " intersections created based on graph nodes with outgoing edges." << std::endl;
 
-    // 2. Create Intersections (approach_ids are OUTGOING edge IDs)
-    Intersection int1(1, {12, 13});
-    Intersection int2(2, {21, 23, 24});
-    Intersection int3(3, {32, 31, 34});
-    Intersection int4(4, {43, 42});
-
-    std::cout << "Intersections created." << std::endl;
 
     // 3. Create Simulation
     Simulation sim;
     sim.set_graph(city_graph);
-    sim.add_intersection(int1);
-    sim.add_intersection(int2);
-    sim.add_intersection(int3);
-    sim.add_intersection(int4);
+    for(const auto& int_pair : intersections_map) {
+        sim.add_intersection(int_pair.second);
+    }
+    std::cout << "Simulation initialized with graph and intersections." << std::endl;
 
-    std::cout << "Simulation initialized." << std::endl;
+    // 4. Initialize Optimizer (Optional Usage Example)
+    TrafficOptimizer optimizer;
+    std::vector<Utils::CsvRow> raw_traffic_data = Utils::parse_csv("data/traffic_density.csv");
+    std::vector<TrafficDataPoint> traffic_data_points;
+    // Convert CsvRow to TrafficDataPoint (skipping header)
+    if (!raw_traffic_data.empty()) {
+        for (size_t i = 1; i < raw_traffic_data.size(); ++i) {
+            const auto& row = raw_traffic_data[i];
+            if (row.fields.size() == 5) { // timestamp,edge_id,density,average_speed,vehicles_passed
+                TrafficDataPoint tdp;
+                bool all_valid = true;
+                all_valid &= Utils::string_to_int(row.fields[0], tdp.timestamp);
+                all_valid &= Utils::string_to_int(row.fields[1], tdp.edge_id);
+                all_valid &= Utils::string_to_double(row.fields[2], tdp.density);
+                all_valid &= Utils::string_to_double(row.fields[3], tdp.average_speed);
+                all_valid &= Utils::string_to_int(row.fields[4], tdp.vehicles_passed);
+                if (all_valid) {
+                    traffic_data_points.push_back(tdp);
+                } else {
+                    std::cerr << "Warning: Could not parse traffic data row: " << i+1 << std::endl;
+                }
+            }
+        }
+    }
+    optimizer.load_traffic_data(traffic_data_points);
+    std::cout << "Optimizer loaded " << optimizer.get_traffic_data().size() << " traffic data points." << std::endl;
 
-    // 4. Initial Vehicles (Optional - mostly rely on spawner)
-    // Vehicle car1(101, 1, 4);
-    // car1.plan_route(sim.get_graph());
-    // sim.add_vehicle(car1);
-    // std::cout << "Manually added Vehicle 101 (1->4) Path: ";
-    // for (int node_id : car1.get_current_path()) { std::cout << node_id << " "; }
-    // std::cout << std::endl;
+    // 5. Initialize Visualizer
+    Visualization::TextVisualizer visualizer;
+    std::cout << "Text visualizer initialized." << std::endl;
 
-    // 5. Run Simulation Loop
-    int simulation_duration_ticks = 300; // Increased duration
+    // 6. Run Simulation Loop
+    int simulation_duration_ticks = 100; // Shorter duration for quick runs with visualization
     const int spawn_interval_info = 20; // Matches SPAWN_INTERVAL in Simulation class for info message
+    bool enable_visualization = true; // Set to false to disable visualizer and run faster
 
     std::cout << "\n--- Starting Simulation Loop (Duration: " << simulation_duration_ticks << " ticks) ---" << std::endl;
+    if (enable_visualization) {
+        std::cout << "(Text visualization is ON. May cause rapid scrolling.)" << std::endl;
+    } else {
+        std::cout << "(Text visualization is OFF for faster execution.)" << std::endl;
+    }
     std::cout << "(Vehicle Spawn Interval in Sim: Approx every " << spawn_interval_info << " ticks)" << std::endl;
 
+
     for (int i = 0; i < simulation_duration_ticks; ++i) {
-        int vehicles_at_start_of_tick_processing = sim.get_vehicles().size();
+        sim.tick();
 
-        sim.tick(); // Simulation processes this tick, vehicles might spawn/despawn
-
-        int vehicles_at_end_of_tick_processing = sim.get_vehicles().size();
-
-        std::cout << "\nTick: " << sim.get_current_tick() << " | Active Vehicles: " << vehicles_at_end_of_tick_processing << std::endl;
-        if (vehicles_at_end_of_tick_processing > vehicles_at_start_of_tick_processing) {
-            std::cout << "  Vehicle(s) spawned this tick." << std::endl;
-        } else if (vehicles_at_end_of_tick_processing < vehicles_at_start_of_tick_processing) {
-            std::cout << "  Vehicle(s) despawned this tick." << std::endl;
-        }
-
-        // Print Intersection States
-        const auto& intersections = sim.get_intersections();
-        for (const auto& pair : intersections) {
-            const Intersection& intersection = pair.second;
-            std::cout << "  Intersection " << intersection.get_id() << ":" << std::endl;
-            for (int approach_id : intersection.get_approach_ids()) { // approach_id is an outgoing edge ID
-                std::cout << "    Outgoing Edge " << approach_id << ": Signal = "
-                          << light_state_to_string(intersection.get_signal_state(approach_id))
-                          << " (Queue: " << intersection.get_vehicle_queue(approach_id).size() << ")"
-                          << std::endl;
+        if (enable_visualization) {
+            // Pass current simulation state to the visualizer
+            visualizer.display_state(
+                sim.get_current_tick(),
+                sim.get_graph(),
+                sim.get_vehicles(),
+                sim.get_intersections()
+            );
+            // Add a small delay to make the text visualization readable
+            std::this_thread::sleep_for(std::chrono::milliseconds(200)); // 200ms delay
+        } else {
+            // Minimal output if visualizer is off
+            if ( (i+1) % 10 == 0 || i == simulation_duration_ticks -1) { // Print every 10 ticks or on last tick
+                 std::cout << "Tick: " << sim.get_current_tick()
+                           << " | Active Vehicles: " << sim.get_vehicles().size() << std::endl;
             }
         }
 
-        // Print detailed status for a few active vehicles or if count is low
-        if (vehicles_at_end_of_tick_processing > 0 && (vehicles_at_end_of_tick_processing < 5 || sim.get_current_tick() % 10 == 0) ) {
-            std::cout << "  Active Vehicle States:" << std::endl;
-            int print_count = 0;
-            for (const auto& v_pair : sim.get_vehicles()) {
-                const Vehicle& v = v_pair.second;
-                std::cout << "    ID " << v.get_id() << ": State=" << vehicle_state_to_string(v.get_state())
-                          << ", AtNode=" << v.get_current_node_id() << ", NextNode=" << v.get_next_node_id()
-                          << ", EdgePrg=" << v.get_current_edge_progress_ticks() << "/" << v.get_current_edge_total_ticks()
-                          << ", PathDest=" << v.get_destination_node_id();
-                // Briefly show path
-                // std::cout << " Path: ";
-                // for(int p_node : v.get_current_path()) { std::cout << p_node << " ";}
-                std::cout << std::endl;
-                if (++print_count >= 5 && vehicles_at_end_of_tick_processing > 5) { // Print max 5 if many vehicles
-                    std::cout << "    ... (and " << vehicles_at_end_of_tick_processing - print_count << " more vehicles)" << std::endl;
-                    break;
-                }
+        // Example of using optimizer (e.g., analyze every N ticks)
+        if ((sim.get_current_tick() % 50 == 0) && !sim.get_intersections().empty() ) { // Every 50 ticks
+            optimizer.analyze_current_conditions(sim.get_graph(), sim.get_intersections());
+            // Example: Get suggestions for the first intersection (if any)
+            int first_intersection_id = sim.get_intersections().begin()->first;
+            std::map<int, int> suggested_timings = optimizer.suggest_new_signal_timings(first_intersection_id);
+            if (!suggested_timings.empty()) {
+                std::cout << "Optimizer suggested new timings for intersection " << first_intersection_id << " (not applied in this demo)." << std::endl;
             }
         }
     }
 
     std::cout << "\n--- Simulation Loop Finished ---" << std::endl;
+    std::cout << "Final tick: " << sim.get_current_tick() << std::endl;
     std::cout << "Final active vehicles: " << sim.get_vehicles().size() << std::endl;
 
     return 0;
