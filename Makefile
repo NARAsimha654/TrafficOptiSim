@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -pthread -g
-INC_PATHS = ./include ./visualization # Renamed for clarity, contains space-separated paths
+INC_PATHS = ./include ./visualization # Holds space-separated paths
 SRC_DIR = ./src
 VIS_SRC_DIR = ./visualization
 TEST_DIR = ./tests
@@ -24,6 +24,7 @@ LIB_OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(filter $(SRC_DIR)/%.cpp,
 MAIN_SRC = $(SRC_DIR)/main.cpp
 MAIN_OBJ = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRC))
 
+# Old individual tests (can be kept or removed if test_traffic_flow covers them)
 TEST_GRAPH_SRC = $(TEST_DIR)/test_graph.cpp
 TEST_ROUTING_SRC = $(TEST_DIR)/test_routing.cpp
 TEST_INTERSECTION_SRC = $(TEST_DIR)/test_intersection.cpp
@@ -34,6 +35,7 @@ TEST_ROUTING_OBJ = $(OBJ_DIR)/test_routing.o
 TEST_INTERSECTION_OBJ = $(OBJ_DIR)/test_intersection.o
 TEST_SIMULATION_OBJ = $(OBJ_DIR)/test_simulation.o
 
+# New comprehensive test file
 TEST_TRAFFIC_FLOW_SRC = $(TEST_DIR)/test_traffic_flow.cpp
 TEST_TRAFFIC_FLOW_OBJ = $(OBJ_DIR)/test_traffic_flow.o
 
@@ -51,34 +53,47 @@ all: $(MAIN_EXEC) $(ALL_TEST_EXECS)
 
 # --- Object file compilation rules ---
 
-# Common rule for library objects from SRC_DIR
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+# Library objects
+$(OBJ_DIR)/graph.o: $(SRC_DIR)/graph.cpp $(INC_PATHS)/graph.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
-# Specific rule for visualizer.o as its source is in VIS_SRC_DIR
-$(OBJ_DIR)/visualizer.o: $(VIS_SRC_DIR)/visualizer.cpp # $(INC_PATHS)/visualizer.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
+$(OBJ_DIR)/vehicle.o: $(SRC_DIR)/vehicle.cpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/graph.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
-# Main application object - depends on all relevant headers
-$(OBJ_DIR)/main.o: $(MAIN_SRC) # $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp $(INC_PATHS)/optimizer.hpp $(INC_PATHS)/utils.hpp $(INC_PATHS)/visualizer.hpp
+$(OBJ_DIR)/intersection.o: $(SRC_DIR)/intersection.cpp $(INC_PATHS)/intersection.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
+
+$(OBJ_DIR)/simulation.o: $(SRC_DIR)/simulation.cpp $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
+
+$(OBJ_DIR)/optimizer.o: $(SRC_DIR)/optimizer.cpp $(INC_PATHS)/optimizer.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/intersection.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
+
+$(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(INC_PATHS)/utils.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
+
+$(OBJ_DIR)/visualizer.o: $(VIS_SRC_DIR)/visualizer.cpp $(INC_PATHS)/visualizer.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
+
+# Main application object
+$(OBJ_DIR)/main.o: $(MAIN_SRC) $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp $(INC_PATHS)/optimizer.hpp $(INC_PATHS)/utils.hpp $(INC_PATHS)/visualizer.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
 # Test objects
-$(TEST_GRAPH_OBJ): $(TEST_GRAPH_SRC) # $(INC_PATHS)/graph.hpp
+$(TEST_GRAPH_OBJ): $(TEST_GRAPH_SRC) $(INC_PATHS)/graph.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
-$(TEST_ROUTING_OBJ): $(TEST_ROUTING_SRC) # $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/graph.hpp
+$(TEST_ROUTING_OBJ): $(TEST_ROUTING_SRC) $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/graph.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
-$(TEST_INTERSECTION_OBJ): $(TEST_INTERSECTION_SRC) # $(INC_PATHS)/intersection.hpp
+$(TEST_INTERSECTION_OBJ): $(TEST_INTERSECTION_SRC) $(INC_PATHS)/intersection.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
-$(TEST_SIMULATION_OBJ): $(TEST_SIMULATION_SRC) # $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
+$(TEST_SIMULATION_OBJ): $(TEST_SIMULATION_SRC) $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
-$(TEST_TRAFFIC_FLOW_OBJ): $(TEST_TRAFFIC_FLOW_SRC) # $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp $(INC_PATHS)/simulation.hpp $(INC_PATHS)/utils.hpp
+$(TEST_TRAFFIC_FLOW_OBJ): $(TEST_TRAFFIC_FLOW_SRC) $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp $(INC_PATHS)/simulation.hpp $(INC_PATHS)/utils.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $< -o $@
-
 
 # --- Executable linking rules ---
 $(MAIN_EXEC): $(MAIN_OBJ) $(LIB_OBJS)
@@ -93,15 +108,13 @@ $(TEST_EXEC_ROUTING): $(TEST_ROUTING_OBJ) $(OBJ_DIR)/vehicle.o $(OBJ_DIR)/graph.
 $(TEST_EXEC_INTERSECTION): $(TEST_INTERSECTION_OBJ) $(OBJ_DIR)/intersection.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-# TEST_EXEC_SIMULATION links against a filtered LIB_OBJS to exclude new ones if it's an older test.
-# For simplicity, if it's meant to be a comprehensive old test, it might need specific old library objects.
-# If it's also a current test, it should link against all LIB_OBJS.
-# Assuming it's an older, more limited test for this example:
-OLD_LIB_OBJS = $(OBJ_DIR)/graph.o $(OBJ_DIR)/vehicle.o $(OBJ_DIR)/intersection.o $(OBJ_DIR)/simulation.o
-$(TEST_EXEC_SIMULATION): $(TEST_SIMULATION_OBJ) $(OLD_LIB_OBJS)
+# For TEST_EXEC_SIMULATION, decide if it links against all LIB_OBJS or a filtered list.
+# Assuming it's an older test that might not need newer optimizer/utils/visualizer:
+OLD_LIB_OBJS_FOR_TEST_SIM = $(OBJ_DIR)/graph.o $(OBJ_DIR)/vehicle.o $(OBJ_DIR)/intersection.o $(OBJ_DIR)/simulation.o
+$(TEST_EXEC_SIMULATION): $(TEST_SIMULATION_OBJ) $(OLD_LIB_OBJS_FOR_TEST_SIM)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(TEST_EXEC_TRAFFIC_FLOW): $(TEST_TRAFFIC_FLOW_OBJ) $(LIB_OBJS)
+$(TEST_EXEC_TRAFFIC_FLOW): $(TEST_TRAFFIC_FLOW_OBJ) $(LIB_OBJS) # New test links against all lib objects
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 # --- Utility targets ---
@@ -120,23 +133,3 @@ clean:
 	@echo "Cleanup complete."
 
 .PHONY: all run_tests clean
-
-# Explicit dependencies for .o files on their respective headers
-# This helps ensure they are rebuilt if only a header changes.
-# Adding specific header dependencies to compilation lines for clarity if preferred,
-# or list them here as prerequisites:
-$(OBJ_DIR)/graph.o: $(SRC_DIR)/graph.cpp $(INC_PATHS)/graph.hpp
-$(OBJ_DIR)/vehicle.o: $(SRC_DIR)/vehicle.cpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/graph.hpp
-$(OBJ_DIR)/intersection.o: $(SRC_DIR)/intersection.cpp $(INC_PATHS)/intersection.hpp
-$(OBJ_DIR)/simulation.o: $(SRC_DIR)/simulation.cpp $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
-$(OBJ_DIR)/optimizer.o: $(SRC_DIR)/optimizer.cpp $(INC_PATHS)/optimizer.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/intersection.hpp
-$(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(INC_PATHS)/utils.hpp
-$(OBJ_DIR)/visualizer.o: $(VIS_SRC_DIR)/visualizer.cpp $(INC_PATHS)/visualizer.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
-
-$(OBJ_DIR)/main.o: $(MAIN_SRC) $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp $(INC_PATHS)/optimizer.hpp $(INC_PATHS)/utils.hpp $(INC_PATHS)/visualizer.hpp
-
-$(TEST_GRAPH_OBJ): $(TEST_GRAPH_SRC) $(INC_PATHS)/graph.hpp
-$(TEST_ROUTING_OBJ): $(TEST_ROUTING_SRC) $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/graph.hpp
-$(TEST_INTERSECTION_OBJ): $(TEST_INTERSECTION_SRC) $(INC_PATHS)/intersection.hpp
-$(TEST_SIMULATION_OBJ): $(TEST_SIMULATION_SRC) $(INC_PATHS)/simulation.hpp $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp
-$(TEST_TRAFFIC_FLOW_OBJ): $(TEST_TRAFFIC_FLOW_SRC) $(INC_PATHS)/graph.hpp $(INC_PATHS)/vehicle.hpp $(INC_PATHS)/intersection.hpp $(INC_PATHS)/simulation.hpp $(INC_PATHS)/utils.hpp
