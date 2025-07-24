@@ -134,9 +134,6 @@ Test results (PASS/FAIL) will be printed to the console.
 - **Libraries**:
     - Standard Template Library (STL): For data structures, algorithms, etc.
 
-## Demo GIF / Screenshots
-*(To be added: A screenshot of the text visualizer output would be appropriate here.)*
-
 ## Future Enhancements
 - Advanced traffic optimization algorithms in `TrafficOptimizer`.
 - Graphical visualization (e.g., using SFML).
