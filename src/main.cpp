@@ -2,12 +2,9 @@
 #include "simulation.hpp"
 #include "visualizer.hpp"
 
-// This is a crucial function that sets up your city map.
-// You can load this from a file later, but for now, we define it here.
 void setup_simulation(Simulation &sim)
 {
     Graph g;
-    // A simple grid for testing
     g.add_node(1, 100, 100);
     g.add_node(2, 500, 100);
     g.add_node(3, 900, 100);
@@ -18,7 +15,6 @@ void setup_simulation(Simulation &sim)
     g.add_node(8, 500, 700);
     g.add_node(9, 900, 700);
 
-    // Edges (id, from, to, weight) - weight is travel time in ticks
     g.add_edge(12, 1, 2, 80);
     g.add_edge(21, 2, 1, 80);
     g.add_edge(23, 2, 3, 80);
@@ -31,7 +27,6 @@ void setup_simulation(Simulation &sim)
     g.add_edge(87, 8, 7, 80);
     g.add_edge(89, 8, 9, 80);
     g.add_edge(98, 9, 8, 80);
-
     g.add_edge(14, 1, 4, 60);
     g.add_edge(41, 4, 1, 60);
     g.add_edge(25, 2, 5, 60);
@@ -46,7 +41,6 @@ void setup_simulation(Simulation &sim)
     g.add_edge(96, 9, 6, 60);
     sim.set_graph(g);
 
-    // Add intersections at all nodes (approaches are outgoing edge IDs)
     sim.add_intersection(Intersection(1, {12, 14}));
     sim.add_intersection(Intersection(2, {21, 23, 25}));
     sim.add_intersection(Intersection(3, {32, 36}));
@@ -60,13 +54,18 @@ void setup_simulation(Simulation &sim)
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(1280, 720), "TrafficOptiSim Visualization");
+    // --- ADDED ---
+    // Create a settings object to enable anti-aliasing for smoother graphics
+    sf::ContextSettings settings;
+    settings.antialiasingLevel = 8; // 8x AA is a good balance
+
+    // Pass the settings to the window constructor
+    sf::RenderWindow window(sf::VideoMode(1280, 720), "TrafficOptiSim Visualization", sf::Style::Default, settings);
     window.setFramerateLimit(60);
 
     Simulation sim;
-    setup_simulation(sim); // Load our city map
+    setup_simulation(sim);
 
-    // Create the visualizer AFTER the simulation graph is set
     Visualizer visualizer(sim.get_graph());
 
     while (window.isOpen())
@@ -82,11 +81,8 @@ int main()
 
         sim.tick();
 
-        window.clear(sf::Color(25, 30, 50)); // Dark navy blue background
-
-        // Use the visualizer to draw the current state of the simulation
+        window.clear(sf::Color(25, 30, 50));
         visualizer.draw(window, sim);
-
         window.display();
     }
 

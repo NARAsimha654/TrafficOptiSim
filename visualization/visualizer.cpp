@@ -1,42 +1,22 @@
 #include "visualizer.hpp"
-#include <iostream> // For error messages
+#include <iostream>
+#include <string> // For std::to_string
+#include <cmath>  // For sqrt and atan2
 
 Visualizer::Visualizer(const Graph &graph) : graph_(graph)
 {
-    // --- Load a font ---
-    // Make sure "DejaVuSans.ttf" is in your project directory or provide a full path.
-    // You can download this font for free online.
     if (!font_.loadFromFile("DejaVuSans.ttf"))
     {
-        std::cerr << "Error: Could not load font 'DejaVuSans.ttf'. Please make sure it's in the executable's directory." << std::endl;
+        std::cerr << "Error: Could not load font 'DejaVuSans.ttf'." << std::endl;
     }
 
-    // --- Pre-process static elements for efficiency ---
-
-    // Prepare edges
-    for (const auto &edge_pair : graph_.get_all_edges())
-    {
-        const Edge &edge = edge_pair.second;
-        const Node *from_node = graph_.get_node(edge.from_node_id);
-        const Node *to_node = graph_.get_node(edge.to_node_id);
-
-        if (from_node && to_node)
-        {
-            sf::Vertex line[] = {
-                sf::Vertex(sf::Vector2f(from_node->x, from_node->y), sf::Color(100, 100, 100)),
-                sf::Vertex(sf::Vector2f(to_node->x, to_node->y), sf::Color(100, 100, 100))};
-            edge_vertices_.push_back(line[0]);
-            edge_vertices_.push_back(line[1]);
-        }
-    }
-
-    // Prepare nodes
+    // Prepare nodes (Edges will be drawn dynamically)
     for (const auto &node_pair : graph_.get_all_nodes())
     {
         const Node &node = node_pair.second;
-        sf::CircleShape shape(8.f);
-        shape.setFillColor(sf::Color(200, 200, 200));
-        shape.setOrigin(8.f, 8.f); // Center the origin
+        sf::CircleShape shape(10.f);                  // Made nodes slightly bigger
+        shape.setFillColor(sf::Color(120, 120, 120)); // Darker grey
+        shape.setOrigin(10.f, 10.f);
         shape.setPosition(node.x, node.y);
         node_shapes_.push_back(shape);
     }
@@ -49,15 +29,39 @@ void Visualizer::draw(sf::RenderWindow &window, const Simulation &sim)
     draw_nodes(window);
     draw_intersections(window, sim);
     draw_vehicles(window, sim);
+    draw_hud(window, sim); // Draw the text last so it's on top
 }
 
 // --- Private Helper Implementations ---
 
+// --- COMPLETELY REWRITTEN ---
 void Visualizer::draw_edges(sf::RenderWindow &window)
 {
-    if (!edge_vertices_.empty())
+    const float road_thickness = 8.f;
+
+    for (const auto &edge_pair : graph_.get_all_edges())
     {
-        window.draw(&edge_vertices_[0], edge_vertices_.size(), sf::Lines);
+        const Edge &edge = edge_pair.second;
+        const Node *from_node = graph_.get_node(edge.from_node_id);
+        const Node *to_node = graph_.get_node(edge.to_node_id);
+
+        if (from_node && to_node)
+        {
+            sf::Vector2f start_pos(from_node->x, from_node->y);
+            sf::Vector2f end_pos(to_node->x, to_node->y);
+            sf::Vector2f direction = end_pos - start_pos;
+            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+            sf::RectangleShape road(sf::Vector2f(length, road_thickness));
+            road.setOrigin(0, road_thickness / 2);
+            road.setPosition(start_pos);
+            road.setFillColor(sf::Color(60, 60, 70)); // Darker road color
+
+            float angle = atan2(direction.y, direction.x) * 180 / 3.14159265f;
+            road.setRotation(angle);
+
+            window.draw(road);
+        }
     }
 }
 
@@ -78,27 +82,25 @@ void Visualizer::draw_intersections(sf::RenderWindow &window, const Simulation &
         if (!node)
             continue;
 
-        // Draw a larger circle for the intersection
-        sf::CircleShape int_shape(12.f);
-        int_shape.setOrigin(12.f, 12.f);
+        sf::CircleShape int_shape(15.f); // Made intersection circle bigger
+        int_shape.setOrigin(15.f, 15.f);
         int_shape.setPosition(node->x, node->y);
-        int_shape.setFillColor(sf::Color::Transparent);
-        int_shape.setOutlineThickness(2);
+        int_shape.setFillColor(sf::Color(40, 40, 50)); // Fill with dark color
+        int_shape.setOutlineThickness(3);
 
-        // Color the outline based on the first approach's light state for simplicity
         if (!intersection.get_approach_ids().empty())
         {
             LightState state = intersection.get_signal_state(intersection.get_approach_ids()[0]);
             switch (state)
             {
             case LightState::GREEN:
-                int_shape.setOutlineColor(sf::Color::Green);
+                int_shape.setOutlineColor(sf::Color(0, 255, 0, 200));
                 break;
             case LightState::YELLOW:
-                int_shape.setOutlineColor(sf::Color::Yellow);
+                int_shape.setOutlineColor(sf::Color(255, 255, 0, 200));
                 break;
             case LightState::RED:
-                int_shape.setOutlineColor(sf::Color::Red);
+                int_shape.setOutlineColor(sf::Color(255, 0, 0, 200));
                 break;
             }
         }
@@ -106,17 +108,16 @@ void Visualizer::draw_intersections(sf::RenderWindow &window, const Simulation &
         {
             int_shape.setOutlineColor(sf::Color(150, 150, 150));
         }
-
         window.draw(int_shape);
     }
 }
 
+// --- HEAVILY MODIFIED ---
 void Visualizer::draw_vehicles(sf::RenderWindow &window, const Simulation &sim)
 {
     for (const auto &pair : sim.get_vehicles())
     {
         const Vehicle &vehicle = pair.second;
-
         if (vehicle.get_state() != VehicleState::EN_ROUTE)
             continue;
 
@@ -126,23 +127,37 @@ void Visualizer::draw_vehicles(sf::RenderWindow &window, const Simulation &sim)
         if (start_node && end_node)
         {
             float progress = (float)vehicle.get_current_edge_progress_ticks() / vehicle.get_current_edge_total_ticks();
+            if (progress > 1.0f)
+                progress = 1.0f; // Cap progress at 100%
 
             sf::Vector2f start_pos(start_node->x, start_node->y);
             sf::Vector2f end_pos(end_node->x, end_node->y);
-
-            // Linear interpolation to find the vehicle's current position
             sf::Vector2f current_pos = start_pos + (end_pos - start_pos) * progress;
 
-            sf::RectangleShape vehicle_shape(sf::Vector2f(10.f, 6.f));
-            vehicle_shape.setOrigin(5.f, 3.f);
+            // Using a simple circle for a cleaner look
+            sf::CircleShape vehicle_shape(6.f);
+            vehicle_shape.setOrigin(6.f, 6.f);
             vehicle_shape.setPosition(current_pos);
-            vehicle_shape.setFillColor(sf::Color::Cyan);
-
-            // Rotate the vehicle to face the direction of travel
-            float angle = atan2(end_pos.y - start_pos.y, end_pos.x - start_pos.x) * 180 / 3.14159265f;
-            vehicle_shape.setRotation(angle);
+            vehicle_shape.setFillColor(sf::Color(255, 180, 0)); // A nice orange/yellow
+            vehicle_shape.setOutlineColor(sf::Color::Black);
+            vehicle_shape.setOutlineThickness(1);
 
             window.draw(vehicle_shape);
         }
     }
+}
+
+// --- NEW FUNCTION ---
+void Visualizer::draw_hud(sf::RenderWindow &window, const Simulation &sim)
+{
+    sf::Text text;
+    text.setFont(font_);
+    text.setCharacterSize(20);
+    text.setFillColor(sf::Color::White);
+    text.setPosition(10, 10);
+
+    std::string hud_string = "Tick: " + std::to_string(sim.get_current_tick()) + "\n" + "Active Vehicles: " + std::to_string(sim.get_vehicles().size());
+
+    text.setString(hud_string);
+    window.draw(text);
 }
